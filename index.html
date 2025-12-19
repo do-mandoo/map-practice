@@ -129,33 +129,39 @@
     }
 
     // RN 메시지 수신
-    window.addEventListener('message', function(event) {
-      try {
-        const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+    function onMessage(event) {
+  try {
+    const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
 
-        if (data.type === 'INIT') {
-          const { key, center, parkingLots } = data.payload;
-          loadKakaoSdk(key, () => {
-            kakao.maps.load(() => initMap(center, parkingLots));
-          });
-        }
+    if (data.type === 'INIT') {
+      const { key, center, parkingLots } = data.payload;
+      loadKakaoSdk(key, () => {
+        kakao.maps.load(() => initMap(center, parkingLots));
+      });
+    }
 
-        if (data.type === 'MOVE_CENTER' && map) {
-          const { lat, lng } = data.payload;
-          map.setCenter(new kakao.maps.LatLng(lat, lng));
-        }
+    if (data.type === 'MOVE_CENTER' && map) {
+      const { lat, lng } = data.payload;
+      map.setCenter(new kakao.maps.LatLng(lat, lng));
+    }
 
-        if (data.type === 'SET_MARKERS' && map) {
-          createMarkers(data.payload.parkingLots || []);
-        }
+    if (data.type === 'SET_MARKERS' && map) {
+      createMarkers(data.payload.parkingLots || []);
+    }
 
-        if (data.type === 'UPDATE_LAST_CENTER') {
-          lastCenter = { ...data.payload };
-        }
-      } catch (e) {
-        send('error', { msg: 'message parse error' });
-      }
-    });
+    if (data.type === 'UPDATE_LAST_CENTER') {
+      lastCenter = { ...data.payload };
+    }
+  } catch (e) {
+    send('error', { msg: 'message parse error' });
+  }
+}
+
+// ✅ iOS/일반
+window.addEventListener('message', onMessage);
+// ✅ Android에서 필요할 때 많음
+document.addEventListener('message', onMessage);
+
 
     // 페이지 로드 완료 신호
     send('ready', {});
