@@ -211,15 +211,15 @@
 
         send('log', { msg: 'loading sdk url: ' + url });
 
-        // no-cors는 status를 못 보지만 "요청이 나갔는지" 확인용
-        fetch(url, { mode: 'no-cors' })
-          .then(() => send('log', { msg: 'fetch(no-cors) OK' }))
-          .catch(e => send('error', { msg: 'fetch(no-cors) FAILED: ' + String(e) }));
+        // // no-cors는 status를 못 보지만 "요청이 나갔는지" 확인용
+        // fetch(url, { mode: 'no-cors' })
+        //   .then(() => send('log', { msg: 'fetch(no-cors) OK' }))
+        //   .catch(e => send('error', { msg: 'fetch(no-cors) FAILED: ' + String(e) }));
 
-        // ✅ status 확인용 (CORS 정책에 따라 실패할 수 있음)
-        fetch(url, { mode: 'cors' })
-          .then(res => send('log', { msg: 'fetch(cors) status: ' + res.status }))
-          .catch(e => send('error', { msg: 'fetch(cors) FAILED (maybe CORS): ' + String(e) }));
+        // // ✅ status 확인용 (CORS 정책에 따라 실패할 수 있음)
+        // fetch(url, { mode: 'cors' })
+        //   .then(res => send('log', { msg: 'fetch(cors) status: ' + res.status }))
+        //   .catch(e => send('error', { msg: 'fetch(cors) FAILED (maybe CORS): ' + String(e) }));
 
         const script = document.createElement('script');
         script.src = url;
