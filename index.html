@@ -16,13 +16,16 @@
       }
       html,
       body {
+        margin: 0;
+        padding: 0;
         width: 100%;
         height: 100%;
         overflow: hidden;
       }
       #map {
-        width: 100%;
-        height: 100%;
+        width: 100vw;
+        height: 100vh;
+        background: #fff;
       }
       .marker-label {
         background: #fff;
@@ -154,6 +157,8 @@
         lastCenter = { ...center };
 
         const container = document.getElementById('map');
+        send('log', { msg: `container size: ${container.clientWidth}x${container.clientHeight}` });
+
         const options = {
           center: new kakao.maps.LatLng(center.lat, center.lng),
           level: 5,
@@ -173,6 +178,12 @@
 
         createMarkers(parkingLots || []);
         send('log', { msg: 'map created' });
+
+        setTimeout(() => {
+          map.relayout();
+          map.setCenter(new kakao.maps.LatLng(center.lat, center.lng));
+          send('log', { msg: 'relayout done' });
+        }, 0);
       }
 
       // RN에서 보내준 key로 SDK 로드
