@@ -1,77 +1,132 @@
-<!doctype html>
+<!DOCTYPE html>
 <html>
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <style>
-    * { margin:0; padding:0; box-sizing:border-box; }
-    html, body { width:100%; height:100%; overflow:hidden; }
-    #map { width:100%; height:100%; }
-    .marker-label {
-      background:#fff; border:2px solid #6366f1; border-radius:8px;
-      padding:4px 8px; font-size:12px; font-weight:bold; color:#4f46e5;
-      box-shadow:0 2px 8px rgba(0,0,0,0.15); white-space:nowrap;
-    }
-    .marker-label.no-spots { border-color:#ef4444; color:#dc2626; background:#fef2f2; }
-    .info-window { padding:10px; min-width:180px; }
-    .info-title { font-weight:bold; font-size:14px; margin-bottom:6px; color:#1f2937; }
-    .info-row { display:flex; justify-content:space-between; font-size:12px; color:#6b7280; margin-bottom:4px; }
-    .info-price { color:#4f46e5; font-weight:bold; }
-    .info-available { color:#10b981; }
-    .info-available.low { color:#f59e0b; }
-    .info-available.none { color:#ef4444; }
-  </style>
-</head>
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <!-- (선택) referrer 문제 대비 -->
+    <meta name="referrer" content="origin" />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+      }
+      #map {
+        width: 100%;
+        height: 100%;
+      }
+      .marker-label {
+        background: #fff;
+        border: 2px solid #6366f1;
+        border-radius: 8px;
+        padding: 4px 8px;
+        font-size: 12px;
+        font-weight: bold;
+        color: #4f46e5;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        white-space: nowrap;
+      }
+      .marker-label.no-spots {
+        border-color: #ef4444;
+        color: #dc2626;
+        background: #fef2f2;
+      }
+      .info-window {
+        padding: 10px;
+        min-width: 180px;
+      }
+      .info-title {
+        font-weight: bold;
+        font-size: 14px;
+        margin-bottom: 6px;
+        color: #1f2937;
+      }
+      .info-row {
+        display: flex;
+        justify-content: space-between;
+        font-size: 12px;
+        color: #6b7280;
+        margin-bottom: 4px;
+      }
+      .info-price {
+        color: #4f46e5;
+        font-weight: bold;
+      }
+      .info-available {
+        color: #10b981;
+      }
+      .info-available.low {
+        color: #f59e0b;
+      }
+      .info-available.none {
+        color: #ef4444;
+      }
+    </style>
+  </head>
 
-<body>
-  <div id="map"></div>
+  <body>
+    <div id="map"></div>
 
-  <script>
-    // RN <-> WebView 브릿지
-    function send(type, payload) {
-    window.ReactNativeWebView?.postMessage(JSON.stringify({ type, ...payload }));
-  }
+    <script>
+      // RN <-> WebView 브릿지
+      function send(type, payload) {
+        window.ReactNativeWebView?.postMessage(JSON.stringify({ type, ...payload }));
+      }
 
-    // state
-    let map = null;
-    let markers = [];
-    let currentInfoWindow = null;
-    let lastCenter = { lat: 37.5665, lng: 126.9780 };
+      // state
+      let map = null;
+      let markers = [];
+      let currentInfoWindow = null;
+      let lastCenter = { lat: 37.5665, lng: 126.978 };
 
-    function getDistance(lat1, lng1, lat2, lng2) {
-      const R = 6371e3;
-      const φ1 = lat1 * Math.PI / 180;
-      const φ2 = lat2 * Math.PI / 180;
-      const Δφ = (lat2 - lat1) * Math.PI / 180;
-      const Δλ = (lng2 - lng1) * Math.PI / 180;
-      const a = Math.sin(Δφ/2) ** 2 + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ/2) ** 2;
-      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-      return R * c;
-    }
+      function getDistance(lat1, lng1, lat2, lng2) {
+        const R = 6371e3;
+        const φ1 = (lat1 * Math.PI) / 180;
+        const φ2 = (lat2 * Math.PI) / 180;
+        const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+        const Δλ = ((lng2 - lng1) * Math.PI) / 180;
+        const a =
+          Math.sin(Δφ / 2) ** 2 +
+          Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) ** 2;
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
+      }
 
-    function createMarkers(parkingData) {
-      // 기존 마커 제거
-      markers.forEach(m => m.setMap && m.setMap(null));
-      markers = [];
+      function createMarkers(parkingData) {
+        markers.forEach((m) => m.setMap && m.setMap(null));
+        markers = [];
 
-      parkingData.forEach(function(lot) {
-        const position = new kakao.maps.LatLng(lot.lat, lot.lng);
+        parkingData.forEach(function (lot) {
+          const position = new kakao.maps.LatLng(lot.lat, lot.lng);
 
-        const noSpotsClass = lot.available === 0 ? 'no-spots' : '';
-        const priceText = lot.available === 0 ? '만차' : (lot.price / 1000) + 'K/h';
-        const content = '<div class="marker-label ' + noSpotsClass + '">' + priceText + '</div>';
+          const noSpotsClass = lot.available === 0 ? 'no-spots' : '';
+          const priceText = lot.available === 0 ? '만차' : lot.price / 1000 + 'K/h';
+          const content =
+            '<div class="marker-label ' + noSpotsClass + '">' + priceText + '</div>';
 
-        const customOverlay = new kakao.maps.CustomOverlay({
-          position, content, yAnchor: 1.3
-        });
-        customOverlay.setMap(map);
-        markers.push(customOverlay);
+          const customOverlay = new kakao.maps.CustomOverlay({
+            position,
+            content,
+            yAnchor: 1.3,
+          });
+          customOverlay.setMap(map);
+          markers.push(customOverlay);
 
-        const marker = new kakao.maps.Marker({ position, opacity: 0 });
-        marker.setMap(map);
+          const marker = new kakao.maps.Marker({ position, opacity: 0 });
+          marker.setMap(map);
 
-        const availableClass = lot.available === 0 ? 'none' : (lot.available < 10 ? 'low' : '');
-        const infoContent = `
+          const availableClass =
+            lot.available === 0 ? 'none' : lot.available < 10 ? 'low' : '';
+          const infoContent = `
           <div class="info-window">
             <div class="info-title">${lot.name}</div>
             <div class="info-row"><span>시간당</span><span class="info-price">${lot.price.toLocaleString()}원</span></div>
@@ -80,117 +135,123 @@
           </div>
         `;
 
-        const infoWindow = new kakao.maps.InfoWindow({ content: infoContent, removable: true });
+          const infoWindow = new kakao.maps.InfoWindow({
+            content: infoContent,
+            removable: true,
+          });
 
-        kakao.maps.event.addListener(marker, 'click', function() {
-          if (currentInfoWindow) currentInfoWindow.close();
-          infoWindow.open(map, marker);
-          currentInfoWindow = infoWindow;
+          kakao.maps.event.addListener(marker, 'click', function () {
+            if (currentInfoWindow) currentInfoWindow.close();
+            infoWindow.open(map, marker);
+            currentInfoWindow = infoWindow;
 
-          send('markerClick', { id: lot.id });
+            send('markerClick', { id: lot.id });
+          });
         });
-      });
-    }
+      }
 
-    function initMap(center, parkingLots) {
-      lastCenter = { ...center };
+      function initMap(center, parkingLots) {
+        lastCenter = { ...center };
 
-      const container = document.getElementById('map');
-      const options = {
-        center: new kakao.maps.LatLng(center.lat, center.lng),
-        level: 5,
-      };
+        const container = document.getElementById('map');
+        const options = {
+          center: new kakao.maps.LatLng(center.lat, center.lng),
+          level: 5,
+        };
 
-      map = new kakao.maps.Map(container, options);
-      window.map = map;
+        map = new kakao.maps.Map(container, options);
+        window.map = map;
 
-      kakao.maps.event.addListener(map, 'idle', function() {
-        const c = map.getCenter();
-        const newLat = c.getLat();
-        const newLng = c.getLng();
-        const distance = getDistance(lastCenter.lat, lastCenter.lng, newLat, newLng);
+        kakao.maps.event.addListener(map, 'idle', function () {
+          const c = map.getCenter();
+          const newLat = c.getLat();
+          const newLng = c.getLng();
+          const distance = getDistance(lastCenter.lat, lastCenter.lng, newLat, newLng);
 
-        send('centerChange', { lat: newLat, lng: newLng, distance });
-      });
+          send('centerChange', { lat: newLat, lng: newLng, distance });
+        });
 
-      createMarkers(parkingLots || []);
-      send('log', { msg: 'map created' });
-    }
+        createMarkers(parkingLots || []);
+        send('log', { msg: 'map created' });
+      }
 
-    // RN에서 보내준 key로 SDK 로드
-    function loadKakaoSdk(appKey, cb) {
-    const url =
-      'https://dapi.kakao.com/v2/maps/sdk.js?appkey=' +
-      encodeURIComponent(appKey) +
-      '&autoload=false';
+      // RN에서 보내준 key로 SDK 로드
+      function loadKakaoSdk(appKey, cb) {
+        const safeKey = String(appKey || '').trim(); // ✅ trim + 안전 변환
 
-    send('log', { msg: 'loading sdk url: ' + url });
+        const url =
+          'https://dapi.kakao.com/v2/maps/sdk.js?appkey=' +
+          encodeURIComponent(safeKey) +
+          '&autoload=false';
 
-    // 네트워크 레벨 체크 (CORS 때문에 응답 내용은 못 봐도, 성공/실패는 갈림)
-    fetch(url, { mode: 'no-cors' })
-      .then(() => send('log', { msg: 'fetch(no-cors) OK' }))
-      .catch((e) => send('error', { msg: 'fetch(no-cors) FAILED: ' + String(e) }));
+        send('log', { msg: 'loading sdk url: ' + url });
 
-    const script = document.createElement('script');
-    script.src = url;
-    script.async = true;
+        // no-cors는 status를 못 보지만 "요청이 나갔는지" 확인용
+        fetch(url, { mode: 'no-cors' })
+          .then(() => send('log', { msg: 'fetch(no-cors) OK' }))
+          .catch((e) => send('error', { msg: 'fetch(no-cors) FAILED: ' + String(e) }));
 
-    script.onload = () => {
-      send('log', { msg: 'sdk script onload' });
-      cb();
-    };
+        // ✅ status 확인용 (CORS 정책에 따라 실패할 수 있음)
+        fetch(url, { mode: 'cors' })
+          .then((res) => send('log', { msg: 'fetch(cors) status: ' + res.status }))
+          .catch((e) =>
+            send('error', { msg: 'fetch(cors) FAILED (maybe CORS): ' + String(e) })
+          );
 
-    script.onerror = (e) => {
-      send('error', { msg: 'sdk script onerror (network blocked)', detail: String(e) });
-    };
+        const script = document.createElement('script');
+        script.src = url;
+        script.async = true;
 
-    document.head.appendChild(script);
-  }
-    // function loadKakaoSdk(appKey, cb) {
-    //   const script = document.createElement('script');
-    //   script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${appKey}&autoload=false`;
-    //   script.onload = () => cb();
-    //   script.onerror = () => send('error', { msg: 'Failed to load Kakao SDK' });
-    //   document.body.appendChild(script);
-    // }
+        script.onload = () => {
+          send('log', { msg: 'sdk script onload' });
+          cb();
+        };
 
-    // RN 메시지 수신
-    function onMessage(event) {
-  try {
-    const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+        script.onerror = (e) => {
+          send('error', {
+            msg: 'sdk script onerror (likely 401/403 or blocked)',
+            detail: String(e),
+          });
+        };
 
-    if (data.type === 'INIT') {
-      const { key, center, parkingLots } = data.payload;
-      loadKakaoSdk(key, () => {
-        kakao.maps.load(() => initMap(center, parkingLots));
-      });
-    }
+        document.head.appendChild(script);
+      }
 
-    if (data.type === 'MOVE_CENTER' && map) {
-      const { lat, lng } = data.payload;
-      map.setCenter(new kakao.maps.LatLng(lat, lng));
-    }
+      // RN 메시지 수신
+      function onMessage(event) {
+        try {
+          const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
 
-    if (data.type === 'SET_MARKERS' && map) {
-      createMarkers(data.payload.parkingLots || []);
-    }
+          if (data.type === 'INIT') {
+            const { center, parkingLots } = data.payload;
+            const key = String(data.payload.key || '').trim(); // ✅ 여기서도 trim
 
-    if (data.type === 'UPDATE_LAST_CENTER') {
-      lastCenter = { ...data.payload };
-    }
-  } catch (e) {
-    send('error', { msg: 'message parse error' });
-  }
-}
+            loadKakaoSdk(key, () => {
+              kakao.maps.load(() => initMap(center, parkingLots));
+            });
+          }
 
-// ✅ iOS/일반
-window.addEventListener('message', onMessage);
-// ✅ Android에서 필요할 때 많음
-document.addEventListener('message', onMessage);
+          if (data.type === 'MOVE_CENTER' && map) {
+            const { lat, lng } = data.payload;
+            map.setCenter(new kakao.maps.LatLng(lat, lng));
+          }
 
+          if (data.type === 'SET_MARKERS' && map) {
+            createMarkers(data.payload.parkingLots || []);
+          }
 
-    // 페이지 로드 완료 신호
-    send('ready', {});
-  </script>
-</body>
+          if (data.type === 'UPDATE_LAST_CENTER') {
+            lastCenter = { ...data.payload };
+          }
+        } catch (e) {
+          send('error', { msg: 'message parse error' });
+        }
+      }
+
+      window.addEventListener('message', onMessage);
+      document.addEventListener('message', onMessage);
+
+      send('ready', {});
+    </script>
+  </body>
 </html>
