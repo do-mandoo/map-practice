@@ -23,8 +23,13 @@
         overflow: hidden;
       }
       #map {
-        width: 100vw;
-        height: 100vh;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        width: 100%;
+        height: 100%;
         background: #fff;
       }
       .marker-label {
@@ -97,15 +102,13 @@
         const φ2 = (lat2 * Math.PI) / 180;
         const Δφ = ((lat2 - lat1) * Math.PI) / 180;
         const Δλ = ((lng2 - lng1) * Math.PI) / 180;
-        const a =
-          Math.sin(Δφ / 2) ** 2 +
-          Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) ** 2;
+        const a = Math.sin(Δφ / 2) ** 2 + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) ** 2;
         const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         return R * c;
       }
 
       function createMarkers(parkingData) {
-        markers.forEach((m) => m.setMap && m.setMap(null));
+        markers.forEach(m => m.setMap && m.setMap(null));
         markers = [];
 
         parkingData.forEach(function (lot) {
@@ -113,8 +116,7 @@
 
           const noSpotsClass = lot.available === 0 ? 'no-spots' : '';
           const priceText = lot.available === 0 ? '만차' : lot.price / 1000 + 'K/h';
-          const content =
-            '<div class="marker-label ' + noSpotsClass + '">' + priceText + '</div>';
+          const content = '<div class="marker-label ' + noSpotsClass + '">' + priceText + '</div>';
 
           const customOverlay = new kakao.maps.CustomOverlay({
             position,
@@ -127,13 +129,14 @@
           const marker = new kakao.maps.Marker({ position, opacity: 0 });
           marker.setMap(map);
 
-          const availableClass =
-            lot.available === 0 ? 'none' : lot.available < 10 ? 'low' : '';
+          const availableClass = lot.available === 0 ? 'none' : lot.available < 10 ? 'low' : '';
           const infoContent = `
           <div class="info-window">
             <div class="info-title">${lot.name}</div>
             <div class="info-row"><span>시간당</span><span class="info-price">${lot.price.toLocaleString()}원</span></div>
-            <div class="info-row"><span>잔여석</span><span class="info-available ${availableClass}">${lot.available}자리</span></div>
+            <div class="info-row"><span>잔여석</span><span class="info-available ${availableClass}">${
+            lot.available
+          }자리</span></div>
             <div class="info-row"><span>평점</span><span>⭐ ${lot.rating}</span></div>
           </div>
         `;
@@ -157,7 +160,17 @@
         lastCenter = { ...center };
 
         const container = document.getElementById('map');
-        send('log', { msg: `container size: ${container.clientWidth}x${container.clientHeight}` });
+
+        // ✅ WebView에서 height가 0으로 잡히는 경우 강제 보정
+        if (container.clientHeight === 0) {
+          document.documentElement.style.height = '100%';
+          document.body.style.height = (window.innerHeight || 700) + 'px';
+          container.style.height = (window.innerHeight || 700) + 'px';
+        }
+
+        send('log', {
+          msg: `container size: ${container.clientWidth}x${container.clientHeight}, innerHeight=${window.innerHeight}`,
+        });
 
         const options = {
           center: new kakao.maps.LatLng(center.lat, center.lng),
@@ -180,7 +193,7 @@
         send('log', { msg: 'map created' });
 
         setTimeout(() => {
-          if(!map) return;
+          if (!map) return;
           map.relayout();
           map.setCenter(new kakao.maps.LatLng(center.lat, center.lng));
           send('log', { msg: 'relayout done' });
@@ -201,14 +214,12 @@
         // no-cors는 status를 못 보지만 "요청이 나갔는지" 확인용
         fetch(url, { mode: 'no-cors' })
           .then(() => send('log', { msg: 'fetch(no-cors) OK' }))
-          .catch((e) => send('error', { msg: 'fetch(no-cors) FAILED: ' + String(e) }));
+          .catch(e => send('error', { msg: 'fetch(no-cors) FAILED: ' + String(e) }));
 
         // ✅ status 확인용 (CORS 정책에 따라 실패할 수 있음)
         fetch(url, { mode: 'cors' })
-          .then((res) => send('log', { msg: 'fetch(cors) status: ' + res.status }))
-          .catch((e) =>
-            send('error', { msg: 'fetch(cors) FAILED (maybe CORS): ' + String(e) })
-          );
+          .then(res => send('log', { msg: 'fetch(cors) status: ' + res.status }))
+          .catch(e => send('error', { msg: 'fetch(cors) FAILED (maybe CORS): ' + String(e) }));
 
         const script = document.createElement('script');
         script.src = url;
@@ -219,7 +230,7 @@
           cb();
         };
 
-        script.onerror = (e) => {
+        script.onerror = e => {
           send('error', {
             msg: 'sdk script onerror (likely 401/403 or blocked)',
             detail: String(e),
