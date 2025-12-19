@@ -82,7 +82,7 @@
     <script>
       // RN <-> WebView 브릿지
       function send(type, payload) {
-        window.ReactNativeWebView?.postMessage(JSON.stringify({ type, ...payload }));
+        window.ReactNativeWebView?.postMessage(JSON.stringify({ type, ...(payload || {}) }));
       }
 
       // state
@@ -180,6 +180,7 @@
         send('log', { msg: 'map created' });
 
         setTimeout(() => {
+          if(!map) return;
           map.relayout();
           map.setCenter(new kakao.maps.LatLng(center.lat, center.lng));
           send('log', { msg: 'relayout done' });
