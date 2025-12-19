@@ -29,10 +29,8 @@
   <script>
     // RN <-> WebView 브릿지
     function send(type, payload) {
-      if (window.ReactNativeWebView) {
-        window.ReactNativeWebView.postMessage(JSON.stringify({ type, ...payload }));
-      }
-    }
+    window.ReactNativeWebView?.postMessage(JSON.stringify({ type, ...payload }));
+  }
 
     // state
     let map = null;
@@ -121,12 +119,40 @@
 
     // RN에서 보내준 key로 SDK 로드
     function loadKakaoSdk(appKey, cb) {
-      const script = document.createElement('script');
-      script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${appKey}&autoload=false`;
-      script.onload = () => cb();
-      script.onerror = () => send('error', { msg: 'Failed to load Kakao SDK' });
-      document.body.appendChild(script);
-    }
+    const url =
+      'https://dapi.kakao.com/v2/maps/sdk.js?appkey=' +
+      encodeURIComponent(appKey) +
+      '&autoload=false';
+
+    send('log', { msg: 'loading sdk url: ' + url });
+
+    // 네트워크 레벨 체크 (CORS 때문에 응답 내용은 못 봐도, 성공/실패는 갈림)
+    fetch(url, { mode: 'no-cors' })
+      .then(() => send('log', { msg: 'fetch(no-cors) OK' }))
+      .catch((e) => send('error', { msg: 'fetch(no-cors) FAILED: ' + String(e) }));
+
+    const script = document.createElement('script');
+    script.src = url;
+    script.async = true;
+
+    script.onload = () => {
+      send('log', { msg: 'sdk script onload' });
+      cb();
+    };
+
+    script.onerror = (e) => {
+      send('error', { msg: 'sdk script onerror (network blocked)', detail: String(e) });
+    };
+
+    document.head.appendChild(script);
+  }
+    // function loadKakaoSdk(appKey, cb) {
+    //   const script = document.createElement('script');
+    //   script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${appKey}&autoload=false`;
+    //   script.onload = () => cb();
+    //   script.onerror = () => send('error', { msg: 'Failed to load Kakao SDK' });
+    //   document.body.appendChild(script);
+    // }
 
     // RN 메시지 수신
     function onMessage(event) {
